@@ -30,6 +30,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.nukleus.NukleusBuilder;
 import org.reaktivity.nukleus.buffer.BufferPool;
+import org.reaktivity.nukleus.buffer.MemoryManager;
 import org.reaktivity.nukleus.function.CommandHandler;
 import org.reaktivity.nukleus.function.MessagePredicate;
 import org.reaktivity.nukleus.route.RouteKind;
@@ -150,6 +151,7 @@ public class NukleusBuilderImpl implements NukleusBuilder
         Conductor conductor = new Conductor(context);
         Watcher watcher = new Watcher(context);
         Router router = new Router(context);
+        MemoryManager memoryManager = new DefaultMemoryManager(context);
         Acceptor acceptor = new Acceptor(context);
 
         conductor.setAcceptor(acceptor);
@@ -157,6 +159,7 @@ public class NukleusBuilderImpl implements NukleusBuilder
         watcher.setAcceptor(acceptor);
         acceptor.setConductor(conductor);
         acceptor.setRouter(router);
+        acceptor.setMemoryManager(memoryManager);
         acceptor.setBufferPoolSupplier(supplyBufferPool);
         acceptor.setStreamFactoryBuilderSupplier(streamFactoryBuilders::get);
         acceptor.setAbortTypeId(abortTypeId);

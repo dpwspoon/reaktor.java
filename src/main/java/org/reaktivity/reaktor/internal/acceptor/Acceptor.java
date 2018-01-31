@@ -33,6 +33,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.nukleus.buffer.BufferPool;
+import org.reaktivity.nukleus.buffer.MemoryManager;
 import org.reaktivity.nukleus.function.MessagePredicate;
 import org.reaktivity.nukleus.route.RouteKind;
 import org.reaktivity.nukleus.stream.StreamFactoryBuilder;
@@ -61,6 +62,7 @@ public final class Acceptor extends Nukleus.Composite
 
     private Conductor conductor;
     private Router router;
+    private MemoryManager memoryManager;
     private Supplier<BufferPool> supplyBufferPool;
     private LongSupplier supplyGroupId;
     private Function<RouteKind, StreamFactoryBuilder> supplyStreamFactoryBuilder;
@@ -92,6 +94,12 @@ public final class Acceptor extends Nukleus.Composite
         Router router)
     {
         this.router = router;
+    }
+
+    public void setMemoryManager(
+            MemoryManager memoryManager)
+    {
+        this.memoryManager = memoryManager;
     }
 
     public void setBufferPoolSupplier(
@@ -250,14 +258,14 @@ public final class Acceptor extends Nukleus.Composite
         return include(new Acceptable(
                 context,
                 router,
+                memoryManager,
                 sourceName,
                 supplyGroupId,
                 groupBudgetManager::claim,
                 groupBudgetManager::release,
                 supplyBufferPool,
                 supplyStreamFactoryBuilder,
-                abortTypeId,
-                correlations));
+                abortTypeId, correlations));
     }
 
     private RouteFW generateSourceRefIfNecessary(

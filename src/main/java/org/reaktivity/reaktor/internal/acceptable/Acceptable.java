@@ -33,6 +33,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.nukleus.buffer.BufferPool;
+import org.reaktivity.nukleus.buffer.MemoryManager;
 import org.reaktivity.nukleus.function.MessageConsumer;
 import org.reaktivity.nukleus.function.MessageFunction;
 import org.reaktivity.nukleus.function.MessagePredicate;
@@ -67,6 +68,7 @@ public final class Acceptable extends Nukleus.Composite implements RouteManager
     public Acceptable(
         Context context,
         Router router,
+        MemoryManager memoryManager,
         String sourceName,
         LongSupplier supplyGroupId,
         LongFunction<IntUnaryOperator> groupBudgetClaimer,
@@ -102,6 +104,7 @@ public final class Acceptable extends Nukleus.Composite implements RouteManager
             {
                 StreamFactory streamFactory = streamFactoryBuilder
                         .setRouteManager(this)
+                        .setMemoryManager(memoryManager)
                         .setWriteBuffer(writeBuffer)
                         .setStreamIdSupplier(supplyStreamId)
                         .setGroupIdSupplier(supplyGroupId)
