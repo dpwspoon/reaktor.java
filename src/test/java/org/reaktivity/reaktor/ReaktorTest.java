@@ -58,7 +58,7 @@ public class ReaktorTest
                 oneOf(controller).close();
             }
         });
-        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[0], new Controller[]{controller}, bufferPool);
+        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[0], new Controller[]{controller});
         reaktor.start();
         reaktor.close();
     }
@@ -82,7 +82,7 @@ public class ReaktorTest
                 oneOf(nukleus).close();
             }
         });
-        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[0], bufferPool);
+        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[0]);
         reaktor.start();
         reaktor.close();
     }
@@ -106,7 +106,7 @@ public class ReaktorTest
                 oneOf(controller).close(); will(throwException(new Exception("controller close failed")));
             }
         });
-        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[0], new Controller[]{controller}, bufferPool);
+        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[0], new Controller[]{controller});
         reaktor.start();
         try
         {
@@ -138,7 +138,7 @@ public class ReaktorTest
                 oneOf(nukleus).close(); will(throwException(new Exception("Nukleus close failed")));
             }
         });
-        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[0], bufferPool);
+        Reaktor reaktor = new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[0]);
         reaktor.start();
         try
         {
@@ -175,7 +175,7 @@ public class ReaktorTest
             }
         });
         Reaktor reaktor =
-                new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[]{controller}, bufferPool);
+                new Reaktor(idleStrategy, errorHandler, new Nukleus[]{nukleus}, new Controller[]{controller});
         reaktor.start();
         try
         {

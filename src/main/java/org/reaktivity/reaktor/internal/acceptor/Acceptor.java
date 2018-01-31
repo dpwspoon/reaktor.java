@@ -102,12 +102,6 @@ public final class Acceptor extends Nukleus.Composite
         this.memoryManager = memoryManager;
     }
 
-    public void setBufferPoolSupplier(
-        Supplier<BufferPool> supplyBufferPool)
-    {
-        this.supplyBufferPool = supplyBufferPool;
-    }
-
     public void setStreamFactoryBuilderSupplier(
         Function<RouteKind, StreamFactoryBuilder> supplyStreamFactoryBuilder)
     {

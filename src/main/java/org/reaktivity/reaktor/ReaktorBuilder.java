@@ -34,11 +34,11 @@ import org.reaktivity.nukleus.ControllerFactory;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.nukleus.NukleusBuilder;
 import org.reaktivity.nukleus.NukleusFactory;
-import org.reaktivity.nukleus.buffer.BufferPool;
+import org.reaktivity.nukleus.buffer.MemoryManager;
 import org.reaktivity.reaktor.internal.ControllerBuilderImpl;
 import org.reaktivity.reaktor.internal.NukleusBuilderImpl;
 import org.reaktivity.reaktor.internal.ReaktorConfiguration;
-import org.reaktivity.reaktor.internal.buffer.DefaultBufferPool;
+import org.reaktivity.reaktor.internal.memory.DefaultMemoryManager;
 
 public class ReaktorBuilder
 {
@@ -107,15 +107,14 @@ public class ReaktorBuilder
         // TODO: bufferPool per thread
         final int bufferPoolCapacity = config.bufferPoolCapacity();
         final int bufferSlotCapacity = config.bufferSlotCapacity();
-        final DefaultBufferPool bufferPool = new DefaultBufferPool(bufferPoolCapacity, bufferSlotCapacity);
-        Supplier<BufferPool> supplyBufferPool = () -> bufferPool;
+        final MemoryManager memoryManager = new DefaultMemoryManager(config);
 
         Nukleus[] nuklei = new Nukleus[0];
         for (String name : nukleusFactory.names())
         {
             if (nukleusMatcher.test(name))
             {
-                NukleusBuilder builder = new NukleusBuilderImpl(config, name, supplyBufferPool);
+                NukleusBuilder builder = new NukleusBuilderImpl(config, name, memoryManager);
                 Nukleus nukleus = nukleusFactory.create(name, config, builder);
                 nuklei = ArrayUtil.add(nuklei, nukleus);
             }
@@ -143,6 +142,6 @@ public class ReaktorBuilder
         }
         ErrorHandler errorHandler = requireNonNull(this.errorHandler, "errorHandler");
 
-        return new Reaktor(idleStrategy, errorHandler, nuklei, controllers, bufferPool);
+        return new Reaktor(idleStrategy, errorHandler, nuklei, controllers);
     }
 }
