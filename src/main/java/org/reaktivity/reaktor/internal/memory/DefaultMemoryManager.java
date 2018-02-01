@@ -31,7 +31,7 @@ public class DefaultMemoryManager implements MemoryManager
         this.smallestBlock = memoryLayout.smallestBlock();
         this.largestBlock = memoryLayout.largestBlock();
         this.numOfOrders = numOfOrders(largestBlock, smallestBlock);
-        this.btreeRO = new BtreeFlyweight(largestBlock, metaDataOffset + SIZE_OF_LOCK_FIELD);
+        this.btreeRO = new BtreeFlyweight(largestBlock, smallestBlock, metaDataOffset + SIZE_OF_LOCK_FIELD);
     }
 
     @Override
@@ -44,17 +44,18 @@ public class DefaultMemoryManager implements MemoryManager
         int requestedBlockSize = calculateBlockSize(capacity);
 
         BtreeFlyweight node = root();
-        while (requestedBlockSize != node.blockSize() || !node.isFree())
+        while (!(requestedBlockSize == node.blockSize() && node.isFree()))
         {
             if (requestedBlockSize > node.blockSize() || node.isFull())
             {
                 while(node.isRightChild())
                 {
-                    node.walkParent();
+                    node = node.walkParent();
                 }
                 if(node.isLeftChild())
                 {
-                    node.walkParent().walkRightChild();
+                    node = node.walkParent();
+                    node = node.walkRightChild();  // TODO optimize
                 }
                 else
                 {
@@ -63,7 +64,7 @@ public class DefaultMemoryManager implements MemoryManager
             }
             else
             {
-                node.walkLeftChild();
+                node = node.walkLeftChild();
             }
         }
 
@@ -72,11 +73,15 @@ public class DefaultMemoryManager implements MemoryManager
             return -1;
         }
 
-        int index = node.index();
         node.fill();
+
+        int indexInOrder = (node.index() + 1) % (2 << node.order()); // TODO move to flyweight
+        int memoffset = indexInOrder * node.blockSize();
+        long addressOffset = buffer.addressOffset() + memoffset;
 
         while (!node.isRoot())
         {
+            node = node.walkParent();
             // TODO optimize (can break out quick)
             if (node.isLeftFull() && node.isRightFull())
             {
@@ -87,7 +92,7 @@ public class DefaultMemoryManager implements MemoryManager
                 node.split();
             }
         }
-        return buffer.addressOffset() + index;
+        return addressOffset;
     }
 
     public BtreeFlyweight root()

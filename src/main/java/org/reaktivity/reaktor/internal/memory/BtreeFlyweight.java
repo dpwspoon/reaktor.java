@@ -14,16 +14,19 @@ class BtreeFlyweight
     static final long UNSPLIT_MASH = FULL;
 
     private final int largestBlock;
+    private final int smallestBlock;
+    private final int offset;
 
     private int entryIndex;
     private UnsafeBuffer buffer;
-    private int offset;
 
      BtreeFlyweight(
         int largestBlock,
+        int smallestBlock,
         int offset) // TODO move offset to wrap?
     {
         this.largestBlock = largestBlock;
+        this.smallestBlock = smallestBlock;
         this.offset = offset;
     }
 
@@ -36,11 +39,12 @@ class BtreeFlyweight
         return this;
     }
 
-    private long value()
+    long value()
     {
         final int arrayIndex = arrayIndex();
-        final int bitIndex = bitOffset();
-        return ((buffer.getLong(arrayIndex) >> bitIndex) & 0x3L);
+        final long longValue = buffer.getLong(arrayIndex);
+        final long value = (longValue >> BITS_PER_LONG - bitOffset() - BITS_PER_ENTRY) & 0x3L;
+        return value;
     }
 
     public BtreeFlyweight walkParent()
@@ -88,40 +92,40 @@ class BtreeFlyweight
 
     public void split()
     {
-        long newValue = SPLIT << (BITS_PER_LONG - bitOffset());
+        long newValue = shiftToEntry(SPLIT);
         buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) | newValue);
     }
 
     public void combine() //rename unsplit ?
     {
-        final long newValueMask = ~(~UNSPLIT_MASH << (BITS_PER_LONG - bitOffset()));
+        final long newValueMask = ~(shiftToEntry(~UNSPLIT_MASH));
         long newValue = buffer.getLong(arrayIndex()) & newValueMask;
         buffer.putLong(arrayIndex(), newValue);
     }
 
     public void free() // TODO
     {
-        long newValue = ~(SPLIT << (EMPTY - bitOffset()));
+        long newValue = ~shiftToEntry(SPLIT);
         buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) & newValue);
     }
 
     // WARNING, this unsplits it AND releases it, not sure if you want it.
     public void empty()
     {
-        final long newValueMask = ~(~EMPTY << (BITS_PER_LONG - bitOffset()));
+        final long newValueMask = ~(shiftToEntry(~EMPTY));
         long newValue = buffer.getLong(arrayIndex()) & newValueMask;
         buffer.putLong(arrayIndex(), newValue);
     }
 
     public void splitAndFill()
     {
-        long newValue = 0xffffffffffffffffL ^ ((SPLIT | FULL) << (BITS_PER_LONG - bitOffset()));
+        long newValue = 0xffffffffffffffffL ^ shiftToEntry(SPLIT | FULL);
         buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) | newValue);
     }
 
     public void fill()
     {
-        final long newValueMask = FULL << (BITS_PER_LONG - bitOffset());
+        final long newValueMask = shiftToEntry(FULL);
         final long newValue = buffer.getLong(arrayIndex()) | newValueMask;
         buffer.putLong(arrayIndex(), newValue);
     }
@@ -180,8 +184,8 @@ class BtreeFlyweight
         int size = largestBlock;
         while(index != 0)
         {
-            size = size >> index;
-            index--;
+            size = size >> 1;
+            index = index >> 1;
         }
         return size;
     }
@@ -193,11 +197,16 @@ class BtreeFlyweight
 
     public boolean isLeftChild()
     {
-        return !isRoot() && entryIndex % 2 == 0;
+        return !isRoot() && entryIndex % 2 == 1;
     }
 
     public boolean isRightChild()
     {
-        return !isRoot() && entryIndex % 2 == 1;
+        return !isRoot() && entryIndex % 2 == 0;
+    }
+
+    private long shiftToEntry(long v)
+    {
+        return v << (BITS_PER_LONG - bitOffset() - BITS_PER_ENTRY);
     }
 }

@@ -8,6 +8,7 @@ import java.io.File;
 import java.nio.MappedByteBuffer;
 import java.nio.file.Path;
 
+import org.agrona.BitUtil;
 import org.agrona.CloseHelper;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -116,10 +117,11 @@ public final class MemoryLayout extends Layout
             int largestBlockSize,
             int smallestBlockSize)
         {
-            return capacity + DefaultMemoryManager.sizeOfMetaData(
+            int requiredSize = capacity + DefaultMemoryManager.sizeOfMetaData(
                     capacity,
                     largestBlockSize,
                     smallestBlockSize);
+            return ((requiredSize + BitUtil.SIZE_OF_LONG - 1) / BitUtil.SIZE_OF_LONG) * BitUtil.SIZE_OF_LONG;
         }
 
     }

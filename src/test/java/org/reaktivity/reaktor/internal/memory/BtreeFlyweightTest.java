@@ -10,42 +10,41 @@ import org.junit.Test;
 
 public class BtreeFlyweightTest
 {
-    private BtreeFlyweight btree = new BtreeFlyweight(1024, 0);
+    private BtreeFlyweight node = new BtreeFlyweight(1024, 8, 0);
 
     @Test
     public void shouldWorkOnRoot()
     {
-        // TODO several methods
         byte[] buffer = new byte[8];
         UnsafeBuffer unsafeBuffer = new UnsafeBuffer(buffer);
-        btree.wrap(unsafeBuffer, 0);
-        assertEquals(0, btree.index());
-        assertTrue(btree.isEmpty());
-        assertFalse(btree.isSplit());
-        assertFalse(btree.isFull());
+        node.wrap(unsafeBuffer, 0);
+        assertEquals(0, node.index());
+        assertTrue(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertFalse(node.isFull());
 
-        btree.fill();
-        assertFalse(btree.isEmpty());
-        assertFalse(btree.isSplit());
-        assertTrue(btree.isFull());
+        node.fill();
+        assertFalse(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertTrue(node.isFull());
 
-        btree.empty();
-        assertTrue(btree.isEmpty());
-        assertFalse(btree.isSplit());
-        assertFalse(btree.isFull());
+        node.empty();
+        assertTrue(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertFalse(node.isFull());
 
-        btree.split();
-        assertTrue(btree.isEmpty());
-        assertTrue(btree.isSplit());
-        assertFalse(btree.isFull());
+        node.split();
+        assertTrue(node.isEmpty());
+        assertTrue(node.isSplit());
+        assertFalse(node.isFull());
 
-        btree.fill();
-        assertFalse(btree.isEmpty());
-        assertTrue(btree.isSplit());
-        assertTrue(btree.isFull());
+        node.fill();
+        assertFalse(node.isEmpty());
+        assertTrue(node.isSplit());
+        assertTrue(node.isFull());
 
-        BtreeFlyweight node = btree.walkLeftChild();
-        assertSame(btree, node);
+        node = node.walkLeftChild();
+        assertSame(node, node);
         assertTrue(node.isEmpty());
         assertFalse(node.isSplit());
         assertFalse(node.isFull());
@@ -77,13 +76,33 @@ public class BtreeFlyweightTest
     }
 
     @Test
+    public void shouldWorkOnLeaf()
+    {
+        byte[] buffer = new byte[8];
+        UnsafeBuffer unsafeBuffer = new UnsafeBuffer(buffer);
+        node.wrap(unsafeBuffer, 0);
+        node = node.walkLeftChild();
+        assertEquals(1, node.index());
+        assertTrue(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertFalse(node.isFull());
+
+        node.fill();
+        assertFalse(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertTrue(node.isFull());
+
+    }
+
+    @Test
     public void shouldRecognizeRoot()
     {
         byte[] buffer = new byte[8];
         UnsafeBuffer unsafeBuffer = new UnsafeBuffer(buffer);
-        BtreeFlyweight node = btree.wrap(unsafeBuffer, 0);
+        node = node.wrap(unsafeBuffer, 0);
         assertTrue(node.isRoot());
         node = node.walkLeftChild();
         assertFalse(node.isRoot());
     }
+
 }
