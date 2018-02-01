@@ -5,7 +5,6 @@ import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_ENTRY;
 import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_LONG;
 
-import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 
 class BtreeFlyweight
@@ -15,8 +14,19 @@ class BtreeFlyweight
     static final long SPLIT = 0x02L;
     static final long UNSPLIT_MASH = FULL;
 
+    private final int largestBlock;
+
     private int entryIndex;
     private UnsafeBuffer buffer;
+    private int offset;
+
+     BtreeFlyweight(
+        int largestBlock,
+        int offset) // TODO move offset to wrap?
+    {
+        this.largestBlock = largestBlock;
+        this.offset = offset;
+    }
 
     public BtreeFlyweight wrap(
         UnsafeBuffer buffer,
@@ -129,11 +139,29 @@ class BtreeFlyweight
 
     private int arrayIndex()
     {
-        return (int) entryIndex / (BITS_PER_LONG >> (BITS_PER_ENTRY - 1));
+        return offset + (int) entryIndex / (BITS_PER_LONG >> (BITS_PER_ENTRY - 1));
     }
 
     private int bitOffset()
     {
         return (entryIndex % (BITS_PER_LONG >> (BITS_PER_ENTRY - 1))) * BITS_PER_ENTRY;
+    }
+
+    public int blockSize()
+    {
+        // TODO optimize
+        int index = entryIndex;
+        int size = largestBlock;
+        while(index != 0)
+        {
+            size = size >> index;
+            index--;
+        }
+        return size;
+    }
+
+    public boolean isRoot()
+    {
+        return entryIndex == 0;
     }
 }

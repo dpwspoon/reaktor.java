@@ -1,5 +1,7 @@
 package org.reaktivity.reaktor.internal.memory;
 
+import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
+
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.reaktivity.nukleus.buffer.MemoryManager;
@@ -12,27 +14,24 @@ public class DefaultMemoryManager implements MemoryManager
     public static final int BITS_PER_ENTRY = 2;
     public static final int SIZE_OF_LOCK_FIELD = BitUtil.SIZE_OF_LONG;
 
-    private final BtreeFlyweight bef = new BtreeFlyweight();
+    private final BtreeFlyweight btree;
 
-    private final int smallestBlockSize;
+    private final int smallestBlock;
     private final int numOfOrders;
     private final int largestBlock;
 
     private final UnsafeBuffer buffer;
+    private final int metaDataOffset;
 
-    protected DefaultMemoryManager(
-        UnsafeBuffer buffer,
-        int memoryOffset,
-        int lockOffset,
-        int bTreeOffset,
-        int numOfOrders,
-        int smallestBlockSize,
-        int largestBlock)
+
+    public DefaultMemoryManager(MemoryLayout memoryLayout)
     {
-        this.buffer = buffer;
-        this.smallestBlockSize = smallestBlockSize;
-        this.numOfOrders = numOfOrders;
-        this.largestBlock = largestBlock;
+        this.buffer = new UnsafeBuffer(memoryLayout.memoryBuffer());
+        this.metaDataOffset = memoryLayout.capacity();
+        this.smallestBlock = memoryLayout.smallestBlock();
+        this.largestBlock = memoryLayout.largestBlock();
+        this.numOfOrders = numOfOrders(largestBlock, smallestBlock);
+        this.btree = new BtreeFlyweight(largestBlock, metaDataOffset + SIZE_OF_LOCK_FIELD);
     }
 
 
@@ -43,11 +42,10 @@ public class DefaultMemoryManager implements MemoryManager
         {
             return -1;
         }
-        int requestedOrder = calculateOrder(capacity);
+        int requestedBlockSize = calculateBlockSize(capacity);
 
-        int currentOrder = 0;
         BtreeFlyweight node = root();
-        while (currentOrder != node.order())
+        while (requestedBlockSize != node.blockSize())
         {
             if (node.isEmpty())
             {
@@ -64,27 +62,26 @@ public class DefaultMemoryManager implements MemoryManager
                 node.walkParent().walkParent().walkRightChild();
             }
         }
-        if (node.order() != requestedOrder && node.isFull())
-        {
-            return -1;
-        }
+//        if (node.order() != requestedOrder && node.isFull())
+//        {
+//            return -1;
+//        }
 
         int index = node.index();
 
-        node = node.walkParent();
-        while (node.isLeftFull() && node.isRightFull())
+        while (!node.isRoot())
         {
             assert node.isSplit();
             node.splitAndFill();
             node = node.walkParent();
         }
         // TODO search optimization on full
-        return 0;
+        return buffer.addressOffset() + index;
     }
 
     public BtreeFlyweight root()
     {
-        return bef.wrap(buffer, 0);
+        return btree.wrap(buffer, 0);
     }
 
     @Override
@@ -93,19 +90,11 @@ public class DefaultMemoryManager implements MemoryManager
         // TODO Auto-generated method stub
     }
 
-    private int calculateOrder(
+    private int calculateBlockSize(
         int size)
     {
-
-        // TOOD we should be able to have a faster approach
-        int order = 0;
-        while(size > (smallestBlockSize << order))
-        {
-            order++;
-        }
-        return numOfOrders - 1 - order;
+        return findNextPositivePowerOfTwo(size);
     }
-
 
     public static int sizeOfMetaData(
             int capacity,

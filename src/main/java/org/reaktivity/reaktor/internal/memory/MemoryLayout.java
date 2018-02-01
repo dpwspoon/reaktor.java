@@ -19,15 +19,18 @@ public final class MemoryLayout extends Layout
     private final UnsafeBuffer memoryBuffer;
     private final int smallestBlockSize;
     private final int largestBlockSize;
+    private final int capacity;
 
     private MemoryLayout(
         UnsafeBuffer memoryBuffer,
         int smallestBlockSize,
-        int largestBlockSize)
+        int largestBlockSize,
+        int capacity)
     {
         this.memoryBuffer = memoryBuffer;
         this.smallestBlockSize = smallestBlockSize;
         this.largestBlockSize = largestBlockSize;
+        this.capacity = capacity;
     }
 
     @Override
@@ -41,9 +44,19 @@ public final class MemoryLayout extends Layout
         return memoryBuffer;
     }
 
-    public int smallestBlockSize()
+    public int smallestBlock()
     {
         return smallestBlockSize;
+    }
+
+    public int capacity()
+    {
+        return capacity;
+    }
+
+    public int largestBlock()
+    {
+        return largestBlockSize;
     }
 
     public static final class Builder extends Layout.Builder<MemoryLayout>
@@ -60,7 +73,7 @@ public final class MemoryLayout extends Layout
         }
 
         public Builder capacity(
-            int routesBufferCapacity)
+            int capacity)
         {
             this.capacity = capacity;
             return this;
@@ -70,6 +83,13 @@ public final class MemoryLayout extends Layout
             boolean readonly)
         {
             this.readonly = readonly;
+            return this;
+        }
+
+        public Builder smallestBlockSize(
+            int blockSize)
+        {
+            smallestBlockSize = blockSize;
             return this;
         }
 
@@ -88,7 +108,7 @@ public final class MemoryLayout extends Layout
 
             final UnsafeBuffer unsafeBuffer = new UnsafeBuffer(mappedMemory);
 
-            return new MemoryLayout(unsafeBuffer, smallestBlockSize, capacity);
+            return new MemoryLayout(unsafeBuffer, smallestBlockSize, capacity, capacity);
         }
 
         private static long sizeToAllocate(
@@ -103,6 +123,5 @@ public final class MemoryLayout extends Layout
         }
 
     }
-
 
 }

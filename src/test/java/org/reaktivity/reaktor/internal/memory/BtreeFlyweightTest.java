@@ -10,11 +10,12 @@ import org.junit.Test;
 
 public class BtreeFlyweightTest
 {
-    private BtreeFlyweight btree = new BtreeFlyweight();
+    private BtreeFlyweight btree = new BtreeFlyweight(1024, 0);
 
     @Test
     public void shouldWorkOnRoot()
     {
+        // TODO several methods
         byte[] buffer = new byte[8];
         UnsafeBuffer unsafeBuffer = new UnsafeBuffer(buffer);
         btree.wrap(unsafeBuffer, 0);
@@ -68,7 +69,21 @@ public class BtreeFlyweightTest
         assertFalse(node.isFull());
 
         assertEquals(0, node.index());
+
+        assertEquals(1024, node.blockSize());
+
+        node = node.walkLeftChild();
+        assertEquals(512, node.blockSize());
     }
 
-    // TODO
+    @Test
+    public void shouldRecognizeRoot()
+    {
+        byte[] buffer = new byte[8];
+        UnsafeBuffer unsafeBuffer = new UnsafeBuffer(buffer);
+        BtreeFlyweight node = btree.wrap(unsafeBuffer, 0);
+        assertTrue(node.isRoot());
+        node = node.walkLeftChild();
+        assertFalse(node.isRoot());
+    }
 }
