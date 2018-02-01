@@ -17,14 +17,14 @@ public class DefaultMemoryManagerTest
 
     private UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[1]);
     private static final int KB = 1024;
-    private static final int BYTES_8 = 64;
+    private static final int BYTES_64 = 64;
 
     @Rule
     public DefaultMemoryManagerRule memoryManagerRule = new DefaultMemoryManagerRule();
 
 
     @Test
-    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_8)
+    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_64)
     public void shouldCalculateMetaDataSize()
     {
         assertEquals(9, sizeOfMetaData(16, 16, 4));
@@ -32,7 +32,7 @@ public class DefaultMemoryManagerTest
     }
 
     @Test
-    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_8)
+    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_64)
     public void shouldAllocateAndReleaseLargestBlock()
     {
         final MemoryManager mm = memoryManagerRule.memoryManager();
@@ -61,28 +61,35 @@ public class DefaultMemoryManagerTest
     }
 
     @Test
-    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_8)
+    @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_64)
     public void shouldAllocateAndReleaseSmallestBlocks()
     {
         final MemoryManager mm = memoryManagerRule.memoryManager();
         final MemoryLayout layout = memoryManagerRule.layout();
         final long baseAddressOffset = layout.memoryBuffer().addressOffset();
 
-        LongArrayList acquiredAddresses = new LongArrayList();
-
-        for (int i = 0; (i * BYTES_8) < KB; i++)
+        for (int allocateAndReleased = 2; allocateAndReleased != 0; allocateAndReleased--)
         {
-            long addressOffset = mm.acquire(BYTES_8);
-            assertEquals(baseAddressOffset + (i * BYTES_8), addressOffset);
-            writeBuffer.wrap(addressOffset, BYTES_8);
-            writeBuffer.putLong(0, i % BYTES_8);
-            acquiredAddresses.add(addressOffset);
-        }
-        for (int i = 0; (i * BYTES_8) < KB; i++)
-        {
-            Long addressOffset = acquiredAddresses.get(i);
-            writeBuffer.wrap(addressOffset, BYTES_8);
-            assertEquals(i % BYTES_8, writeBuffer.getLong(0));
+            LongArrayList acquiredAddresses = new LongArrayList();
+            for (int i = 0; (i * BYTES_64) < KB; i++)
+            {
+                long addressOffset = mm.acquire(BYTES_64);
+                assertEquals(baseAddressOffset + (i * BYTES_64), addressOffset);
+                writeBuffer.wrap(addressOffset, BYTES_64);
+                writeBuffer.putLong(0, i % BYTES_64);
+                acquiredAddresses.add(addressOffset);
+            }
+            for (int i = 0; (i * BYTES_64) < KB; i++)
+            {
+                long addressOffset = acquiredAddresses.get(i);
+                writeBuffer.wrap(addressOffset, BYTES_64);
+                assertEquals(i % BYTES_64, writeBuffer.getLong(0));
+            }
+            for (int i = 0; (i * BYTES_64) < KB; i++)
+            {
+                long addressOffset = acquiredAddresses.get(i);
+                mm.release(addressOffset, BYTES_64);
+            }
         }
     }
 

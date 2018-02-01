@@ -105,9 +105,10 @@ public class DefaultMemoryManager implements MemoryManager
         int capacity)
     {
         offset -= buffer.addressOffset();
-        int blockSize = calculateBlockSize(capacity);
-        int order = calculateOrder(blockSize);
-        int entryIndex = order == 0 ? 0 : (int) (offset / (order * blockSize));
+        final int blockSize = calculateBlockSize(capacity);
+        final int order = calculateOrder(blockSize);
+        final int orderSize = 0x01 << order;
+        final int entryIndex = orderSize - 1 + (int) (offset / blockSize);
         BtreeFlyweight node = btreeRO.wrap(buffer, entryIndex);
         node.empty();
         while(!node.isRoot())
