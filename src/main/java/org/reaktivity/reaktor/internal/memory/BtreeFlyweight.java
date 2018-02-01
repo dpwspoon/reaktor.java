@@ -2,18 +2,18 @@ package org.reaktivity.reaktor.internal.memory;
 
 import static java.lang.Long.numberOfLeadingZeros;
 import static org.agrona.BitUtil.SIZE_OF_LONG;
+import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_ENTRY;
+import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_LONG;
 
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 
 class BtreeFlyweight
 {
-    static final int BITS_PER_LONG = BitUtil.SIZE_OF_LONG * 8;
-    static final int BITS_PER_ENTRY = 2;
-
     static final long EMPTY = 0x00L;
     static final long FULL = 0x01L;
     static final long SPLIT = 0x02L;
+    static final long UNSPLIT_MASH = FULL;
 
     private int entryIndex;
     private UnsafeBuffer buffer;
@@ -78,6 +78,14 @@ class BtreeFlyweight
         buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) | newValue);
     }
 
+    public void combine() //rename unsplit ?
+    {
+        final long newValueMask = ~(~UNSPLIT_MASH << (BITS_PER_LONG - bitOffset()));
+        long newValue = buffer.getLong(arrayIndex()) & newValueMask;
+        buffer.putLong(arrayIndex(), newValue);
+    }
+
+    // WARNING, this unsplits it, not sure if you want it.
     public void empty()
     {
         final long newValueMask = ~(~EMPTY << (BITS_PER_LONG - bitOffset()));

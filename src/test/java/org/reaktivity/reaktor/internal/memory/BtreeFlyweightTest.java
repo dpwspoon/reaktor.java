@@ -55,6 +55,20 @@ public class BtreeFlyweightTest
         assertTrue(node.isSplit());
         assertTrue(node.isFull());
 
+        node.combine();
+        assertFalse(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertTrue(node.isFull());
+
+        // implicit unsplit if do empty
+        node.split();
+        node.empty();
+        assertTrue(node.isEmpty());
+        assertFalse(node.isSplit());
+        assertFalse(node.isFull());
+
         assertEquals(0, node.index());
     }
+
+    // TODO
 }

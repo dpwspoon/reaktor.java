@@ -7,7 +7,11 @@ import org.reaktivity.nukleus.buffer.MemoryManager;
 // NOTE, order 0 is largest in terms of size
 public class DefaultMemoryManager implements MemoryManager
 {
-    
+
+    public static final int BITS_PER_LONG = BitUtil.SIZE_OF_LONG * 8;
+    public static final int BITS_PER_ENTRY = 2;
+    public static final int SIZE_OF_LOCK_FIELD = BitUtil.SIZE_OF_LONG;
+
     private final BtreeFlyweight bef = new BtreeFlyweight();
 
     private final int smallestBlockSize;
@@ -100,6 +104,37 @@ public class DefaultMemoryManager implements MemoryManager
             order++;
         }
         return numOfOrders - 1 - order;
+    }
+
+
+    public static int sizeOfMetaData(
+            int capacity,
+            int largestBlockSize,
+            int smallestBlockSize)
+    {
+        assert capacity == largestBlockSize;
+        final int bTreeLength = bTreeLength(largestBlockSize, smallestBlockSize);
+        return bTreeLength + SIZE_OF_LOCK_FIELD;
+    }
+
+    private static int numOfOrders(
+        long largest,
+        int smallest)
+    {
+        int result = 0;
+        while(largest >>> result != smallest)
+        {
+            result++;
+        }
+        return result + 1;
+    }
+
+    private static int bTreeLength(
+        int largestBlockSize,
+        int smallestBlockSize)
+    {
+        int numOfOrders = numOfOrders(largestBlockSize, smallestBlockSize);
+        return (int) Math.ceil(((0x01 << numOfOrders) * BITS_PER_ENTRY) / (BITS_PER_LONG * 1.0));
     }
 
 }
