@@ -62,20 +62,22 @@ public class DefaultMemoryManager implements MemoryManager
                 node.walkParent().walkParent().walkRightChild();
             }
         }
-//        if (node.order() != requestedOrder && node.isFull())
-//        {
-//            return -1;
-//        }
+
+        if (node.isFull())
+        {
+            return -1;
+        }
 
         int index = node.index();
+        node.fill();
 
-        while (!node.isRoot())
+
+        while (!node.isRoot() && node.isLeftFull() && node.isRightFull())
         {
-            assert node.isSplit();
-            node.splitAndFill();
             node = node.walkParent();
+            assert node.isSplit();
+            node.fill();
         }
-        // TODO search optimization on full
         return buffer.addressOffset() + index;
     }
 

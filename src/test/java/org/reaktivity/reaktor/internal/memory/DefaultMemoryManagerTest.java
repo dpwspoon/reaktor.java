@@ -5,6 +5,7 @@ import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.sizeOf
 
 import java.io.File;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 
 public class DefaultMemoryManagerTest
@@ -20,13 +21,26 @@ public class DefaultMemoryManagerTest
     @Test
     public void shouldAllocateMemory()
     {
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[1]);
+        final int capacity = 1024;
         MemoryLayout memoryLayout = new MemoryLayout.Builder()
-                .capacity(1024)
+                .capacity(capacity)
                 .path(new File("target/nukleus-itests/memory").toPath())
                 .smallestBlockSize(8)
                 .build();
+
         DefaultMemoryManager mm = new DefaultMemoryManager(memoryLayout);
-        long largestBlock = mm.acquire(1024);
-        System.out.println(largestBlock);
+        long addressOffset = mm.acquire(capacity);
+        writeBuffer.wrap(addressOffset, capacity);
+        long expected = 0xffffffffffffffffL;
+        writeBuffer.putLong(0, expected);
+        long actual = writeBuffer.getLong(0);
+        assertEquals(expected, actual);
+
+        actual = memoryLayout.memoryBuffer().getLong(0);
+        assertEquals(expected, actual);
+
+        assertEquals(-1, mm.acquire(1024));
+        mm.release(0, 1024);
     }
 }

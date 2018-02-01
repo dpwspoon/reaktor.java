@@ -1,7 +1,6 @@
 package org.reaktivity.reaktor.internal.memory;
 
 import static java.lang.Long.numberOfLeadingZeros;
-import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_ENTRY;
 import static org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.BITS_PER_LONG;
 
@@ -41,7 +40,7 @@ class BtreeFlyweight
     {
         final int arrayIndex = arrayIndex();
         final int bitIndex = bitOffset();
-        return ((buffer.getLong(arrayIndex * SIZE_OF_LONG) >> bitIndex) & 0x3L);
+        return ((buffer.getLong(arrayIndex) >> bitIndex) & 0x3L);
     }
 
     public BtreeFlyweight walkParent()
