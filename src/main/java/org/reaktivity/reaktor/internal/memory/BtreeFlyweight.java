@@ -3,88 +3,129 @@ package org.reaktivity.reaktor.internal.memory;
 import static java.lang.Long.numberOfLeadingZeros;
 import static org.agrona.BitUtil.SIZE_OF_LONG;
 
+import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.reaktivity.reaktor.internal.memory.DefaultMemoryManager.NodeType;
 
 class BtreeFlyweight
 {
-    private final DefaultMemoryManager BtreeNodeFlyweight;
+    static final int BITS_PER_LONG = BitUtil.SIZE_OF_LONG * 8;
+    static final int BITS_PER_ENTRY = 2;
 
-    /**
-     * @param defaultMemoryManager
-     */
-    BtreeFlyweight(DefaultMemoryManager defaultMemoryManager)
-    {
-        BtreeNodeFlyweight = defaultMemoryManager;
-    }
+    static final long EMPTY = 0x00L;
+    static final long FULL = 0x01L;
+    static final long SPLIT = 0x02L;
 
     private int entryIndex;
     private UnsafeBuffer buffer;
-    private byte value;
 
-    BtreeFlyweight wrap(UnsafeBuffer buffer, int entryIndex)
+    public BtreeFlyweight wrap(
+        UnsafeBuffer buffer,
+        int entryIndex)
     {
         this.entryIndex = entryIndex;
         this.buffer = buffer;
-        final int arrayIndex = DefaultMemoryManager.arrayIndex(entryIndex);
-        final int bitIndex = DefaultMemoryManager.bitIndex(entryIndex);
-        // TODO got to byte array index
-        
-        // leave as long, move to value method
-        this.value = (byte) ((buffer.getLong(arrayIndex * SIZE_OF_LONG) >> bitIndex) & 0x3L);
         return this;
     }
 
-    NodeType type()
+    private long value()
     {
-        return NodeType.valueOf(value);
+        final int arrayIndex = arrayIndex();
+        final int bitIndex = bitOffset();
+        return ((buffer.getLong(arrayIndex * SIZE_OF_LONG) >> bitIndex) & 0x3L);
     }
 
     public BtreeFlyweight walkParent()
     {
-        this.wrap(buffer, DefaultMemoryManager.parent(entryIndex));
+        this.wrap(buffer, (entryIndex - 1) >> 1);
         return this;
     }
 
     public BtreeFlyweight walkLeftChild()
     {
-        this.wrap(buffer, DefaultMemoryManager.leftChild(entryIndex));
+        this.wrap(buffer, 2 * entryIndex + 1);
         return this;
     }
 
     public BtreeFlyweight walkRightChild()
     {
-        this.wrap(buffer, DefaultMemoryManager.leftChild(entryIndex));
+        this.wrap(buffer, 2 * entryIndex + 2);
         return this;
     }
 
     public int order()
     {
-        return DefaultMemoryManager.BITS_PER_LONG - numberOfLeadingZeros(entryIndex) - 1;
+        return BITS_PER_LONG - numberOfLeadingZeros(entryIndex) - 1;
     }
 
     public boolean isFull()
     {
-        return type() == NodeType.ALLOCATED || type() == NodeType.SPLIT_AND_FULL;
+        return (value() & FULL) > 0;
     }
 
     public boolean isEmpty()
     {
-        return type() == NodeType.EMPTY;
+        return (value() & FULL) == 0;
+    }
+
+    public boolean isSplit()
+    {
+        return (value() & SPLIT) > 0;
     }
 
     public void split()
     {
-        // DPW TODO
+        long newValue = SPLIT << (BITS_PER_LONG - bitOffset());
+        buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) | newValue);
     }
 
-    public void allocate()
+    public void empty()
     {
-        // TODO Auto-generated method stub
+        final long newValueMask = ~(~EMPTY << (BITS_PER_LONG - bitOffset()));
+        long newValue = buffer.getLong(arrayIndex()) & newValueMask;
+        buffer.putLong(arrayIndex(), newValue);
     }
 
-    public void getAddress()
+    public void splitAndFill()
     {
-        // TODO Auto-generated method stub
+        long newValue = 0xffffffffffffffffL ^ ((SPLIT | FULL) << (BITS_PER_LONG - bitOffset()));
+        buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) | newValue);
+    }
+
+    public void fill()
+    {
+        final long newValueMask = FULL << (BITS_PER_LONG - bitOffset());
+        final long newValue = buffer.getLong(arrayIndex()) | newValueMask;
+        buffer.putLong(arrayIndex(), newValue);
+    }
+
+    public boolean isLeftFull()
+    {
+        this.walkLeftChild();
+        boolean result = isFull();
+        this.walkParent();
+        return result;
+    }
+
+    public boolean isRightFull()
+    {
+        this.walkRightChild();
+        boolean result = isFull();
+        this.walkParent();
+        return result;
+    }
+
+    public int index()
+    {
+        return entryIndex;
+    }
+
+    private int arrayIndex()
+    {
+        return (int) entryIndex / (BITS_PER_LONG >> (BITS_PER_ENTRY - 1));
+    }
+
+    private int bitOffset()
+    {
+        return (entryIndex % (BITS_PER_LONG >> (BITS_PER_ENTRY - 1))) * BITS_PER_ENTRY;
     }
 }
