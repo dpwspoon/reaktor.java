@@ -70,23 +70,20 @@ public class DefaultMemoryManagerTest
 
         LongArrayList acquiredAddresses = new LongArrayList();
 
-//        for (int i = 0; (i * BYTES_8) < KB; i++)
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; (i * BYTES_8) < KB; i++)
         {
-            System.out.println(i);
             long addressOffset = mm.acquire(BYTES_8);
             assertEquals(baseAddressOffset + (i * BYTES_8), addressOffset);
             writeBuffer.wrap(addressOffset, BYTES_8);
             writeBuffer.putLong(0, i % BYTES_8);
             acquiredAddresses.add(addressOffset);
         }
-//        for (int i = 0; (i * BYTES_8) < KB; i++)
-//        for (int i = 0; i < 8; i++)
-//        {
-//            Long addressOffset = acquiredAddresses.get(i);
-//            writeBuffer.wrap(addressOffset, BYTES_8);
-//            assertEquals(i % BYTES_8, writeBuffer.getLong(0));
-//        }
+        for (int i = 0; (i * BYTES_8) < KB; i++)
+        {
+            Long addressOffset = acquiredAddresses.get(i);
+            writeBuffer.wrap(addressOffset, BYTES_8);
+            assertEquals(i % BYTES_8, writeBuffer.getLong(0));
+        }
     }
 
 }

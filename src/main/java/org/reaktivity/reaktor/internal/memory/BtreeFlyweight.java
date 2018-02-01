@@ -65,9 +65,19 @@ class BtreeFlyweight
         return this;
     }
 
-    public int order()
+    private int order()
     {
-        return BITS_PER_LONG - numberOfLeadingZeros(entryIndex) - 1;
+        return BITS_PER_LONG - numberOfLeadingZeros(entryIndex + 1) - 1;
+    }
+
+    private int orderSize()
+    {
+        return 0x01 << order();
+    }
+
+    public int indexInOrder()
+    {
+        return (index() + 1) % orderSize();
     }
 
     public boolean isFull()
@@ -179,10 +189,9 @@ class BtreeFlyweight
 
     public int blockSize()
     {
-        // TODO optimize
-        int index = entryIndex;
+        int index = entryIndex + 1;
         int size = largestBlock;
-        while(index != 0)
+        while(index != 1)
         {
             size = size >> 1;
             index = index >> 1;

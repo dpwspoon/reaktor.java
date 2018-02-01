@@ -75,8 +75,7 @@ public class DefaultMemoryManager implements MemoryManager
 
         node.fill();
 
-        int indexInOrder = (node.index() + 1) % (2 << node.order()); // TODO move to flyweight
-        int memoffset = indexInOrder * node.blockSize();
+        int memoffset = node.indexInOrder() * node.blockSize();
         long addressOffset = buffer.addressOffset() + memoffset;
 
         while (!node.isRoot())
