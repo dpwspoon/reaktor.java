@@ -35,11 +35,12 @@ public class DefaultMemoryManagerTest
     @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_64)
     public void shouldAllocateAndReleaseLargestBlock()
     {
-        final MemoryManager mm = memoryManagerRule.memoryManager();
+        memoryManagerRule.assertReleased();
+        final MemoryManager memoryManager = memoryManagerRule.memoryManager();
         final MemoryLayout layout = memoryManagerRule.layout();
         final long baseAddressOffset = layout.memoryBuffer().addressOffset();
 
-        long addressOffset = mm.acquire(KB);
+        long addressOffset = memoryManager.acquire(KB);
         assertEquals(baseAddressOffset, addressOffset);
         writeBuffer.wrap(addressOffset, KB);
         long expected = 0xffffffffffffffffL;
@@ -47,12 +48,15 @@ public class DefaultMemoryManagerTest
         long actual = writeBuffer.getLong(0);
         assertEquals(expected, actual);
 
-        assertEquals(-1, mm.acquire(KB));
-        assertEquals(-1, mm.acquire(KB / 2));
+        assertEquals(-1, memoryManager.acquire(KB));
+        assertEquals(-1, memoryManager.acquire(KB / 2));
 
-        mm.release(addressOffset, KB);
+        memoryManagerRule.assertNotReleased();
 
-        addressOffset = mm.acquire(KB);
+        memoryManager.release(addressOffset, KB);
+        memoryManagerRule.assertReleased();
+
+        addressOffset = memoryManager.acquire(KB);
         writeBuffer.wrap(addressOffset, KB);
         expected = 0xffffffffffffffffL;
         writeBuffer.putLong(0, expected);
@@ -64,7 +68,7 @@ public class DefaultMemoryManagerTest
     @ConfigureMemoryLayout(capacity = KB, smallestBlockSize = BYTES_64)
     public void shouldAllocateAndReleaseSmallestBlocks()
     {
-        final MemoryManager mm = memoryManagerRule.memoryManager();
+        final MemoryManager memoryManager = memoryManagerRule.memoryManager();
         final MemoryLayout layout = memoryManagerRule.layout();
         final long baseAddressOffset = layout.memoryBuffer().addressOffset();
 
@@ -73,11 +77,12 @@ public class DefaultMemoryManagerTest
             LongArrayList acquiredAddresses = new LongArrayList();
             for (int i = 0; (i * BYTES_64) < KB; i++)
             {
-                long addressOffset = mm.acquire(BYTES_64);
+                long addressOffset = memoryManager.acquire(BYTES_64);
                 assertEquals(baseAddressOffset + (i * BYTES_64), addressOffset);
                 writeBuffer.wrap(addressOffset, BYTES_64);
                 writeBuffer.putLong(0, i % BYTES_64);
                 acquiredAddresses.add(addressOffset);
+                memoryManagerRule.assertNotReleased();
             }
             for (int i = 0; (i * BYTES_64) < KB; i++)
             {
@@ -88,8 +93,9 @@ public class DefaultMemoryManagerTest
             for (int i = 0; (i * BYTES_64) < KB; i++)
             {
                 long addressOffset = acquiredAddresses.get(i);
-                mm.release(addressOffset, BYTES_64);
+                memoryManager.release(addressOffset, BYTES_64);
             }
+            memoryManagerRule.assertReleased();
         }
     }
 

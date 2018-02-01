@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 import org.agrona.LangUtil;
+import org.junit.Assert;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -58,6 +59,16 @@ public class DefaultMemoryManagerRule implements TestRule
     public MemoryLayout layout()
     {
         return layout;
+    }
+
+    public void assertReleased()
+    {
+        Assert.assertTrue(memoryManager.released());
+    }
+
+    public void assertNotReleased()
+    {
+        Assert.assertTrue(!memoryManager.released());
     }
 
 }

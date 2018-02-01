@@ -172,4 +172,8 @@ public class DefaultMemoryManager implements MemoryManager
         return (int) Math.ceil(((0x01 << numOfOrders) * BITS_PER_ENTRY) / (BITS_PER_LONG * 1.0));
     }
 
+    public boolean released()
+    {
+        return root().isFree();
+    }
 }
