@@ -71,6 +71,11 @@ class BtreeFlyweight
         return (value() & FULL) > 0;
     }
 
+    public boolean isFree()
+    {
+        return isEmpty() && !isSplit();
+    }
+
     public boolean isEmpty()
     {
         return (value() & FULL) == 0;
@@ -94,7 +99,13 @@ class BtreeFlyweight
         buffer.putLong(arrayIndex(), newValue);
     }
 
-    // WARNING, this unsplits it, not sure if you want it.
+    public void free() // TODO
+    {
+        long newValue = ~(SPLIT << (EMPTY - bitOffset()));
+        buffer.putLong(arrayIndex(), buffer.getLong(arrayIndex()) & newValue);
+    }
+
+    // WARNING, this unsplits it AND releases it, not sure if you want it.
     public void empty()
     {
         final long newValueMask = ~(~EMPTY << (BITS_PER_LONG - bitOffset()));
@@ -131,6 +142,22 @@ class BtreeFlyweight
         return result;
     }
 
+    public boolean isLeftFullOrSplit()
+    {
+        this.walkLeftChild();
+        boolean result = isFull() || isSplit();
+        this.walkParent();
+        return result;
+    }
+
+    public boolean isRightFullOrSplit()
+    {
+        this.walkRightChild();
+        boolean result = isFull() || isSplit();
+        this.walkParent();
+        return result;
+    }
+
     public int index()
     {
         return entryIndex;
@@ -162,5 +189,15 @@ class BtreeFlyweight
     public boolean isRoot()
     {
         return entryIndex == 0;
+    }
+
+    public boolean isLeftChild()
+    {
+        return !isRoot() && entryIndex % 2 == 0;
+    }
+
+    public boolean isRightChild()
+    {
+        return !isRoot() && entryIndex % 2 == 1;
     }
 }

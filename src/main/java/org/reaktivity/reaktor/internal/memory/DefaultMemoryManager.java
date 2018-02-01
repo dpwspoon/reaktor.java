@@ -14,7 +14,7 @@ public class DefaultMemoryManager implements MemoryManager
     public static final int BITS_PER_ENTRY = 2;
     public static final int SIZE_OF_LOCK_FIELD = BitUtil.SIZE_OF_LONG;
 
-    private final BtreeFlyweight btree;
+    private final BtreeFlyweight btreeRO;
 
     private final int smallestBlock;
     private final int numOfOrders;
@@ -31,9 +31,8 @@ public class DefaultMemoryManager implements MemoryManager
         this.smallestBlock = memoryLayout.smallestBlock();
         this.largestBlock = memoryLayout.largestBlock();
         this.numOfOrders = numOfOrders(largestBlock, smallestBlock);
-        this.btree = new BtreeFlyweight(largestBlock, metaDataOffset + SIZE_OF_LOCK_FIELD);
+        this.btreeRO = new BtreeFlyweight(largestBlock, metaDataOffset + SIZE_OF_LOCK_FIELD);
     }
-
 
     @Override
     public long acquire(int capacity)
@@ -45,21 +44,26 @@ public class DefaultMemoryManager implements MemoryManager
         int requestedBlockSize = calculateBlockSize(capacity);
 
         BtreeFlyweight node = root();
-        while (requestedBlockSize != node.blockSize())
+        while (requestedBlockSize != node.blockSize() || !node.isFree())
         {
-            if (node.isEmpty())
+            if (requestedBlockSize > node.blockSize() || node.isFull())
             {
-                node.split();
+                while(node.isRightChild())
+                {
+                    node.walkParent();
+                }
+                if(node.isLeftChild())
+                {
+                    node.walkParent().walkRightChild();
+                }
+                else
+                {
+                    break; // you are root
+                }
             }
-
-            node = node.walkLeftChild();
-            if(node.isFull())
+            else
             {
-                node = node.walkParent().walkRightChild();
-            }
-            if (node.isFull())
-            {
-                node.walkParent().walkParent().walkRightChild();
+                node.walkLeftChild();
             }
         }
 
@@ -71,26 +75,61 @@ public class DefaultMemoryManager implements MemoryManager
         int index = node.index();
         node.fill();
 
-
-        while (!node.isRoot() && node.isLeftFull() && node.isRightFull())
+        while (!node.isRoot())
         {
-            node = node.walkParent();
-            assert node.isSplit();
-            node.fill();
+            // TODO optimize (can break out quick)
+            if (node.isLeftFull() && node.isRightFull())
+            {
+                node.fill();
+            }
+            else
+            {
+                node.split();
+            }
         }
         return buffer.addressOffset() + index;
     }
 
     public BtreeFlyweight root()
     {
-        return btree.wrap(buffer, 0);
+        return btreeRO.wrap(buffer, 0);
     }
 
     @Override
-    public void release(long offset, int capacity)
+    public void release(
+        long offset,
+        int capacity)
     {
-        // TODO Auto-generated method stub
+        offset -= buffer.addressOffset();
+        int blockSize = calculateBlockSize(capacity);
+        int order = calculateOrder(blockSize);
+        int entryIndex = order == 0 ? 0 : (int) (offset / (order * blockSize));
+        BtreeFlyweight node = btreeRO.wrap(buffer, entryIndex);
+        node.empty();
+        while(!node.isRoot())
+        {
+            node = node.walkParent();
+            if(!node.isRightFullOrSplit() && !node.isLeftFullOrSplit())
+            {
+                node.empty();
+            }
+            else
+            {
+                node.free();
+            }
+        }
     }
+
+    private int calculateOrder(int blockSize)
+    {
+        int order = 0;
+        while (largestBlock >> order != blockSize)
+        {
+            order++;
+        }
+        return order;
+    }
+
 
     private int calculateBlockSize(
         int size)
